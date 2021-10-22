@@ -1,0 +1,6 @@
+Debug/**
+/Debug/
+/Release/
+/test/main
+/test/*.o
+/test/**/*.o
