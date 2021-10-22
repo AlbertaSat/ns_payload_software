@@ -29,5 +29,6 @@ typedef enum{
     NS_BAD_ANS = 2,
 }NS_return;
 
+NS_return ARI_get_heartbeat(uint8_t* heartbeat);
 
 #endif // NORTHERN_SPIRIT_HANDLER

@@ -42,6 +42,10 @@ NS_return ARI_get_heartbeat(uint8_t* heartbeat){
     uint8_t answer[ARI_HEARTBEAT_ANS_LEN] = 0;
 
     send_NS_command(&command, sizeof(command), answer, sizeof(answer));
+
+    for(int i = 0; i < ARI_HEARTBEAT_ANS_LEN; i++){
+        print("Heartbeat answer[%d]: %d\n", i, answer[i]);
+    }
 }
 
 #endif

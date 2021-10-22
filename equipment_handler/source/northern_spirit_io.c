@@ -29,6 +29,8 @@
  *      NS_return
  */
 
+NS_return send_NS_command(uint8_t* command, uint32_t command_length, uint8_t* answer, uint8_t answer_length);
+
 NS_return send_NS_command(uint8_t* command, uint32_t command_length, uint8_t* answer, uint8_t answer_length) {
     xSemaphoreTake(uart_mutex, portMAX_DELAY); //  TODO: make this a reasonable timeout
     sciSend(PAYLOAD_SCI, command, command_length);
