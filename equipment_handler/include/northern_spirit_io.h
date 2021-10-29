@@ -13,29 +13,25 @@
  */
 
 /**
- * @file northern_spirit_handler.h
+ * @file northern_spirit_io.c
  * @author Thomas Ganley
- * @date 2021-10-22
+ * @date 2021-10-26
  */
 
-#ifndef NORTHERN_SPIRIT_HANDLER
-#define NORTHERN_SPIRIT_HANDLER
+#include "northern_spirit_handler.h"
+#include "FreeRTOS.h"
+#include "HL_sci.h"
+#include "i2c_io.h"
+#include "os_queue.h"
+#include "os_semphr.h"
+#include "os_task.h"
+#include "system.h"
+#include <stdbool.h>
+#include <string.h>
 
-#include <stdint.h>
+#define NS_SEMAPHORE_TIMEOUT_MS 100
+#define NS_UART_TIMEOUT_MS 10000
 
-#define ARI_HEARTBEAT_ANS_LEN 1
-#define ARI_SWVERSION_ANS_LEN 7
-#define ARI_TELEMETRY_ANS_LEN 48
+void init_ns_io();
 
-typedef enum{
-    NS_OK = 0,
-    NS_BAD_CMD = 1,
-    NS_BAD_ANS = 2,
-    NS_UART_FAIL = 3,
-}NS_return;
-
-NS_return NS_get_heartbeat(uint8_t* heartbeat);
-NS_return NS_get_software_version(uint8_t* version);
-NS_return NS_get_telemetry(uint8_t* telemetry);
-
-#endif // NORTHERN_SPIRIT_HANDLER
+NS_return send_NS_command(uint8_t* command, uint32_t command_length, uint8_t* answer, uint8_t answer_length);

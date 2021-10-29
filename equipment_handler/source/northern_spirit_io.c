@@ -29,24 +29,70 @@
  *      NS_return
  */
 
-NS_return send_NS_command(uint8_t* command, uint32_t command_length, uint8_t* answer, uint8_t answer_length);
+#include "northern_spirit_io.h"
+
+#define NS_QUEUE_LENGTH 100
+#define ITEM_SIZE 1
+
+static QueueHandle_t nsQueue;
+static uint8_t nsBuffer;
+static SemaphoreHandle_t tx_semphr;
+static SemaphoreHandle_t uart_mutex;
+
+void init_ns_io() {
+    sciSetBaudrate(PAYLOAD_SCI, 9600);
+    tx_semphr = xSemaphoreCreateBinary();
+    nsQueue = xQueueCreate(NS_QUEUE_LENGTH, ITEM_SIZE);
+    uart_mutex = xSemaphoreCreateMutex();
+    nsBuffer = 0;
+    sciReceive(PAYLOAD_SCI, 1, &nsBuffer);
+}
+
+void ns_sciNotification(sciBASE_t *sci, int flags) {
+    portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
+
+    switch (flags) {
+    case SCI_RX_INT:
+        xQueueSendToBackFromISR(nsQueue, &nsBuffer, &xHigherPriorityTaskWoken);
+        sciReceive(sci, 1, &nsBuffer);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        break;
+    case SCI_TX_INT:
+        xSemaphoreGiveFromISR(tx_semphr, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        break;
+    default:
+        break;
+    }
+}
 
 NS_return send_NS_command(uint8_t* command, uint32_t command_length, uint8_t* answer, uint8_t answer_length) {
-    xSemaphoreTake(uart_mutex, portMAX_DELAY); //  TODO: make this a reasonable timeout
-    sciSend(PAYLOAD_SCI, command, command_length);
-    xSemaphoreTake(tx_semphr, portMAX_DELAY); // TODO: make a reasonable timeout
+    if(xSemaphoreTake(uart_mutex, NS_SEMAPHORE_TIMEOUT_MS) != pdTRUE){
+        return NS_UART_FAIL;
+    }
+
+    sciSend(PAYLOAD_SCI, command_length, command);
+
+    if(xSemaphoreTake(tx_semphr, NS_SEMAPHORE_TIMEOUT_MS) != pdTRUE){
+        return NS_UART_FAIL;
+    }
 
     int received = 0;
-    uint8_t reply[answer_length];
+    uint8_t* reply = (uint8_t *)pvPortMalloc(answer_length*sizeof(uint8_t));
+
+    if (reply == NULL){
+        return NS_UART_FAIL;
+    }
 
     while (received < answer_length) {
-        xQueueReceive(adcsQueue, reply[received], portMAX_DELAY); // TODO: make a reasonable timeout
+        if(!xQueueReceive(nsQueue, (reply+received), NS_UART_TIMEOUT_MS))return NS_UART_FAIL;
         received++;
     }
 
     memcpy(answer, reply, answer_length);
 
+    vPortFree(reply);
+
     xSemaphoreGive(uart_mutex);
-    // TODO: Error handling for the semaphores
     return NS_OK;
 }
