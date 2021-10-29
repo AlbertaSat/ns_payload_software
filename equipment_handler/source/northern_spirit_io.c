@@ -85,8 +85,11 @@ NS_return send_NS_command(uint8_t* command, uint32_t command_length, uint8_t* an
     }
 
     while (received < answer_length) {
-        if(!xQueueReceive(nsQueue, (reply+received), NS_UART_TIMEOUT_MS))return NS_UART_FAIL;
-        received++;
+        if(xQueueReceive(nsQueue, (reply+received), NS_UART_TIMEOUT_MS) == pdFAIL){
+            return NS_UART_FAIL;
+        }else{
+            received++;
+        }
     }
 
     memcpy(answer, reply, answer_length);
